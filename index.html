@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Game of life</title>
+		<style type="text/css">
+			#canvas {
+				width: 640px;
+				margin: 0 auto;
+				font-size: 0;
+			}
+
+			#canvas div {
+				width: 10px;
+				height: 10px;
+				background: #CCC;
+				border: 1px solid #555;
+				margin-left: -1px;
+				margin-top: -1px;
+				display: inline-block;
+				vertical-align: top;
+			}
+
+			#canvas div.alive {
+				background: #FFF;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			<button id="control">Start</button>
+		</div>
+		<div id="canvas"></div>
+		<script type="text/javascript" src="./script.js"></script>
+	</body>
+</html>
