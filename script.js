@@ -1,5 +1,5 @@
 (function() {
-	var SIZE    = 60;
+	var SIZE    = 10;
 	var TIMEOUT = 100;
 
 	var cells     = [];
@@ -7,7 +7,9 @@
 
 	var canvas 	= document.getElementById('canvas');
 
-	canvas.style.width = (SIZE * 10.6) + "px";
+	var timer  = null;
+	var blocks = null;
+	var state  = null;
 
 	var cellStates = {
 		ALIVE: 	 1 << 0,
@@ -20,15 +22,7 @@
 		PAUSE: 2
 	};
 
-	prepare();
-
-	var state   = gameStates.STOP;
-
-	var blocks 	= canvas.getElementsByTagName('div');
-
-	var timer 	= null;
-
-	document.addEventListener('click', markBlock);
+	resetGame();
 
 	function sideCells( index, row ) {
 		var cells = [];
@@ -145,7 +139,7 @@
 
 	document.getElementById('control').addEventListener('click', function(e) {
 		if( state == gameStates.STOP ) {
-			document.removeEventListener('click', markBlock);
+			canvas.removeEventListener('click', markBlock);
 		}
 
 		if( state !== gameStates.RUN ) {
@@ -160,5 +154,30 @@
 		}
 
 		state = state == gameStates.RUN ? gameStates.PAUSE : gameStates.RUN;
+	});
+
+	function resetGame() {
+		SIZE = parseInt(document.getElementById('size').value, 10);
+
+		cells = [];
+
+		state = gameStates.STOP;
+		document.getElementById('control').innerHTML = 'Start';
+
+		canvas.addEventListener('click', markBlock);
+
+		canvas.style.width = (SIZE * 11) + "px";
+
+		prepare();
+		blocks = canvas.getElementsByTagName('div');
+
+		clearInterval( timer );
+	}
+
+	document.getElementById('reset').addEventListener('click', resetGame);
+	document.getElementById('size').addEventListener('keyup', function(e) {
+		if( e.keyCode == 13 ) {
+			resetGame();
+		}
 	});
 })();

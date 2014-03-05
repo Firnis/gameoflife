@@ -1,0 +1,25 @@
+html * {
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+#canvas {
+	width: 640px;
+	margin: 0 auto;
+	font-size: 0;
+}
+
+#canvas div {
+	width:  12px;
+	height: 12px;
+	background: #CCC;
+	border: 1px solid #555;
+	margin-left: -1px;
+	margin-top:  -1px;
+	display: inline-block;
+	vertical-align: top;
+}
+
+#canvas div.alive {
+	background: #FFF;
+}
