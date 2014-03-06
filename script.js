@@ -1,28 +1,13 @@
 (function() {
-	var SIZE    = 10;
-	var TIMEOUT = 100;
+	var SIZE    = 0;
 
 	var cells     = [];
 	var liveCells = [];
-
-	var canvas 	= document.getElementById('canvas');
-
-	var timer  = null;
-	var blocks = null;
-	var state  = null;
 
 	var cellStates = {
 		ALIVE: 	 1 << 0,
 		CHECKED: 1 << 1
 	};
-
-	var gameStates = {
-		STOP:  0,
-		RUN:   1,
-		PAUSE: 2
-	};
-
-	resetGame();
 
 	function sideCells( index, row ) {
 		var cells = [];
@@ -87,13 +72,13 @@
 		cells = [];
 
 		liveCells.forEach( function(val, index) {
-			updateBlock( index );
+			updateCell( index );
 
-			getNeighbours( index ).forEach( updateBlock );
+			getNeighbours( index ).forEach( updateCell );
 		} );
 	}
 
-	function updateBlock( index ) {
+	function updateCell( index ) {
 		if( cells[ index ] & cellStates.CHECKED ) {
 			return;
 		}
@@ -105,7 +90,7 @@
 		cells[ index ] = alive | cellStates.CHECKED;
 
 		if( alive != wasAlive ) {
-			blocks[ index ].className = alive ? 'alive' : '';
+			gui.setAlive( index, alive );
 		}
 	}
 
@@ -117,67 +102,112 @@
 		return (count > min && count < 4) ? cellStates.ALIVE : 0;
 	}
 
-	function prepare() {
-		canvas.innerHTML = '';
+	var GameUI = function() {
+		this.setup();
+	};
 
-		for(var i = 0, len = SIZE * SIZE; i < len; ++i) {
-			var block = document.createElement('div');
+	GameUI.prototype = {
+		canvas:    document.getElementById('canvas'),
+		startBtn:  document.getElementById('control'),
+		resetBtn:  document.getElementById('reset'),
+		sizeInput: document.getElementById('size'),
 
-			block.dataset.index = i;
+		timer:  null,
+		state:  null,
+		blocks: null,
 
-			canvas.appendChild(block);
+		timeout: 100,
+
+		states: {
+			STOP:  0,
+			RUN:   1,
+			PAUSE: 2
+		},
+
+		markBlock: function(e) {
+			var block = e.target,
+				index = block.dataset.index;
+
+			cells[index] ^= cellStates.ALIVE;
+			block.className = cells[index] ? 'alive' : '';
+		},
+
+		setup: function () {
+			var self = this;
+
+			this.startBtn.addEventListener('click', function(e) {
+				if( self.state == self.states.STOP ) {
+					self.canvas.removeEventListener('click', this.markBlock);
+				}
+
+				if( self.state !== self.states.RUN ) {
+					self.timer = setInterval(iteration, self.timeout);
+					e.target.innerHTML = 'Pause';
+
+					iteration();
+				}
+				else {
+					clearInterval( self.timer );
+					e.target.innerHTML = 'Start';
+				}
+
+				self.state = self.state == self.states.RUN ? self.states.PAUSE : self.states.RUN;
+			});
+
+			this.resetBtn.addEventListener('click', this.reset.bind(this));
+			this.sizeInput.addEventListener('keyup', function(e) {
+				if( e.keyCode == 13 ) {
+					self.reset();
+				}
+			});
+
+			this.reset();
+		},
+
+		reset: function () {
+			var size = parseInt(this.sizeInput.value, 10);
+
+			if( size != SIZE ) {
+				SIZE = size;
+				this.fillCanvas();
+				this.blocks = this.canvas.getElementsByTagName('div');
+
+				this.canvas.style.width = (SIZE * 11) + "px";
+			}
+			else {
+				var liveCells = canvas.getElementsByClassName('alive');
+
+				for (var i = liveCells.length - 1; i >= 0; i--) {
+					liveCells[i].className = '';
+				}
+			}
+
+			cells = [];
+
+			this.state = this.states.STOP;
+			this.startBtn.innerHTML = 'Start';
+
+			this.canvas.addEventListener('click', this.markBlock);
+
+			clearInterval( this.timer );
+		},
+
+		fillCanvas: function() {
+			this.canvas.innerHTML = '';
+
+			for(var i = 0, len = SIZE * SIZE; i < len; ++i) {
+				var block = document.createElement('div');
+
+				block.dataset.index = i;
+
+				this.canvas.appendChild(block);
+			}
+		},
+
+		setAlive: function( index, alive ) {
+			this.blocks[ index ].className = alive ? 'alive' : '';
 		}
-	}
+	};
 
-	function markBlock(e) {
-		var block = e.target,
-			index = block.dataset.index;
-
-		cells[index] ^= cellStates.ALIVE;
-		block.className = cells[index] ? 'alive' : '';
-	}
-
-	document.getElementById('control').addEventListener('click', function(e) {
-		if( state == gameStates.STOP ) {
-			canvas.removeEventListener('click', markBlock);
-		}
-
-		if( state !== gameStates.RUN ) {
-			timer = setInterval(iteration, TIMEOUT);
-			e.target.innerHTML = 'Pause';
-
-			iteration();
-		}
-		else {
-			clearInterval( timer );
-			e.target.innerHTML = 'Start';
-		}
-
-		state = state == gameStates.RUN ? gameStates.PAUSE : gameStates.RUN;
-	});
-
-	function resetGame() {
-		SIZE = parseInt(document.getElementById('size').value, 10);
-
-		cells = [];
-
-		state = gameStates.STOP;
-		document.getElementById('control').innerHTML = 'Start';
-
-		canvas.addEventListener('click', markBlock);
-
-		canvas.style.width = (SIZE * 11) + "px";
-
-		prepare();
-		blocks = canvas.getElementsByTagName('div');
-
-		clearInterval( timer );
-	}
-
-	document.getElementById('reset').addEventListener('click', resetGame);
-	document.getElementById('size').addEventListener('keyup', function(e) {
-		if( e.keyCode == 13 ) {
-			resetGame();
-		}
-	});
+	var gui = new GameUI();
 })();
