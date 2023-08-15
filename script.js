@@ -1,202 +1,194 @@
-(function() {
-	var SIZE    = 0;
+(function(document) {
+	let SIZE = 0;
+	let cells = [];
+	let liveCells = [];
 
-	var cells     = [];
-	var liveCells = [];
-
-	var cellStates = {
+	const cellStates = {
 		ALIVE: 	 1 << 0,
 		CHECKED: 1 << 1
 	};
 
-	function sideCells( index, row ) {
-		var cells = [];
-
+	function sideCells(index, row) {
 		// index, index - SIZE, index + SIZE
-		cells.push( index );
+		const cells = [index];
 
-		if( row > 0 ) {
-			cells.push( index - SIZE );
+		if (row > 0) {
+			cells.push(index - SIZE);
 
-			if( row < ( SIZE - 1 ) ) {
-				cells.push( index + SIZE )
+			if (row < (SIZE - 1)) {
+				cells.push(index + SIZE)
 			}
 		}
 
 		return cells;
 	}
 
-	function getNeighbours( index ) {
-		var row = ~~(index / SIZE);
-		var col = index % SIZE;
+	function getNeighbours(index) {
+		const row = ~~(index / SIZE);
+		const col = index % SIZE;
+		const neighbors = [];
 
-		var neighbors = [];
-
-		if( col > 0 ) {
+		if (col > 0) {
 			// 3 cells to left
-			neighbors = neighbors.concat( sideCells( index - 1, row ) );
+			neighbors.push(...sideCells(index - 1, row));
 
-			if( col < ( SIZE - 1 ) ) {
+			if (col < (SIZE - 1)) {
 				// 3 cells to right
-				neighbors = neighbors.concat( sideCells( index + 1, row ) );
+				neighbors.push(...sideCells(index + 1, row));
 			}
 		}
-		
-		if( row > 0 ) {
-			// 1 cell above
-			neighbors.push( index - SIZE );
 
-			if( row < ( SIZE - 1 ) ) {
+		if (row > 0) {
+			// 1 cell above
+			neighbors.push(index - SIZE);
+
+			if (row < (SIZE - 1)) {
 				// 1 cell below
-				neighbors.push( index + SIZE );
+				neighbors.push(index + SIZE);
 			}
 		}
 
 		return neighbors;
 	}
 
-	function countNeighbors( index ) {
-		return getNeighbours( index ).reduce(function(sum, value) {
-			return sum + ( (liveCells[value] & cellStates.ALIVE) > 0 );
+	function countNeighbors(index) {
+		return getNeighbours(index).reduce(function(sum, value) {
+			return sum + ((liveCells[value] & cellStates.ALIVE) > 0);
 		}, 0);
 	}
 
 	function iteration() {
 		liveCells = cells.reduce(function(alive, cell, index) {
-			if( cell & cellStates.ALIVE ) {
-				alive[ index ] |= cellStates.ALIVE;
+			if (cell & cellStates.ALIVE) {
+				alive[index] |= cellStates.ALIVE;
 			}
 			return alive;
 		}, []);
 
 		cells = [];
 
-		liveCells.forEach( function(val, index) {
-			updateCell( index );
+		for (let i = 0; i < liveCells.length; i++) {
+			updateCell(i);
 
-			getNeighbours( index ).forEach( updateCell );
-		} );
+			getNeighbours(i).forEach(updateCell);
+		}
 	}
 
-	function updateCell( index ) {
-		if( cells[ index ] & cellStates.CHECKED ) {
+	function updateCell(index) {
+		if (cells[index] & cellStates.CHECKED) {
 			return;
 		}
 
-		var wasAlive = liveCells[index] & cellStates.ALIVE;
+		const wasAlive = liveCells[index] & cellStates.ALIVE;
+		const alive = isAlive(index, wasAlive);
 
-		var alive    = isAlive( index, wasAlive );
+		cells[index] = alive | cellStates.CHECKED;
 
-		cells[ index ] = alive | cellStates.CHECKED;
-
-		if( alive != wasAlive ) {
-			gui.setAlive( index, alive );
+		if (alive != wasAlive) {
+			gui.setAlive(index, alive);
 		}
 	}
 
-	function isAlive( index, wasAlive ) {
-		var count = countNeighbors( index );
-
-		var min   = wasAlive ? 1 : 2;
+	function isAlive(index, wasAlive) {
+		const count = countNeighbors(index);
+		const min = wasAlive ? 1 : 2;
 
 		return (count > min && count < 4) ? cellStates.ALIVE : 0;
 	}
 
-	var GameUI = function() {
+	const GameUI = function() {
 		this.setup();
 	};
 
+	const States = {
+		STOP: 0,
+		RUN: 1,
+		PAUSE: 2
+	};
+
+	const TIMEOUT = 100;
+
 	GameUI.prototype = {
-		canvas:    document.getElementById('canvas'),
-		startBtn:  document.getElementById('control'),
-		resetBtn:  document.getElementById('reset'),
+		canvas: document.getElementById('canvas'),
+		startBtn: document.getElementById('control'),
+		resetBtn: document.getElementById('reset'),
 		sizeInput: document.getElementById('size'),
 
-		timer:  null,
-		state:  null,
+		timer: null,
+		state: null,
 		blocks: null,
 
-		timeout: 100,
-
-		states: {
-			STOP:  0,
-			RUN:   1,
-			PAUSE: 2
-		},
-
 		markBlock: function(e) {
-			var block = e.target,
-				index = block.dataset.index;
+			if (this.state !== States.STOP) {
+				return;
+			}
 
-			cells[index] ^= cellStates.ALIVE;
-			block.className = cells[index] ? 'alive' : '';
+			const block = e.target;
+			const index = block.dataset.index;
+
+			this.setAlive(index, cells[index] ^= cellStates.ALIVE);
 		},
 
 		setup: function () {
-			var self = this;
+			const self = this;
 
 			this.startBtn.addEventListener('click', function(e) {
-				if( self.state == self.states.STOP ) {
-					self.canvas.removeEventListener('click', this.markBlock);
+				if (self.state === States.STOP) {
+					self.canvas.removeEventListener('click', (e) => this.markBlock(e));
 				}
 
-				if( self.state !== self.states.RUN ) {
-					self.timer = setInterval(iteration, self.timeout);
+				if (self.state !== States.RUN) {
+					self.timer = setInterval(iteration, TIMEOUT);
 					e.target.innerHTML = 'Pause';
 
 					iteration();
 				}
 				else {
-					clearInterval( self.timer );
+					clearInterval(self.timer);
 					e.target.innerHTML = 'Start';
 				}
 
-				self.state = self.state == self.states.RUN ? self.states.PAUSE : self.states.RUN;
+				self.state = self.state == States.RUN ? States.PAUSE : States.RUN;
 			});
 
 			this.resetBtn.addEventListener('click', this.reset.bind(this));
 			this.sizeInput.addEventListener('keyup', function(e) {
-				if( e.keyCode == 13 ) {
+				if (e.key === 'Enter') {
 					self.reset();
 				}
 			});
+
+			this.canvas.addEventListener('click', (e) => this.markBlock(e));
 
 			this.reset();
 		},
 
 		reset: function () {
-			var size = parseInt(this.sizeInput.value, 10);
+			const size = parseInt(this.sizeInput.value, 10);
 
-			if( size != SIZE ) {
+			if (size != SIZE) {
 				SIZE = size;
-				this.fillCanvas();
-				this.blocks = this.canvas.getElementsByTagName('div');
 
 				this.canvas.style.width = (SIZE * 11) + "px";
 			}
-			else {
-				var liveCells = canvas.getElementsByClassName('alive');
 
-				for (var i = liveCells.length - 1; i >= 0; i--) {
-					liveCells[i].className = '';
-				}
-			}
+			this.fillCanvas();
+
+			this.blocks = this.canvas.getElementsByTagName('div');
 
 			cells = [];
 
-			this.state = this.states.STOP;
+			this.state = States.STOP;
 			this.startBtn.innerHTML = 'Start';
 
-			this.canvas.addEventListener('click', this.markBlock);
-
-			clearInterval( this.timer );
+			clearInterval(this.timer);
 		},
 
 		fillCanvas: function() {
 			this.canvas.innerHTML = '';
 
-			for(var i = 0, len = SIZE * SIZE; i < len; ++i) {
-				var block = document.createElement('div');
+			for (let i = 0, len = SIZE * SIZE; i < len; ++i) {
+				const block = document.createElement('div');
 
 				block.dataset.index = i;
 
@@ -204,10 +196,10 @@
 			}
 		},
 
-		setAlive: function( index, alive ) {
-			this.blocks[ index ].className = alive ? 'alive' : '';
+		setAlive: function(index, alive) {
+			this.blocks[index].className = alive ? 'alive' : '';
 		}
 	};
 
-	var gui = new GameUI();
-})();
+	const gui = new GameUI();
+})(document);
